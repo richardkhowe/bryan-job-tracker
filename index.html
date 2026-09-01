@@ -1127,7 +1127,16 @@ Visa sponsorship required"></textarea></div>
         return s;
       } catch { return defaultState(); }
     }
-    const SHARED_URL = "/.netlify/functions/tracker-state";
+    const SHARED_OWNER = "richardkhowe";
+    const SHARED_REPO = "bryan-job-tracker-state";
+    const SHARED_PATH = "state.json";
+    const SHARED_BRANCH = "main";
+    const SHARED_RAW_URL = "https://raw.githubusercontent.com/" + SHARED_OWNER + "/" + SHARED_REPO + "/" + SHARED_BRANCH + "/" + SHARED_PATH;
+    const SHARED_CONTENTS_URL = "https://api.github.com/repos/" + SHARED_OWNER + "/" + SHARED_REPO + "/contents/" + SHARED_PATH;
+    const TRACKER_STATE_TOKEN = "";
+    function trackerStateToken() {
+      return (typeof window !== "undefined" && window.__TRACKER_STATE_TOKEN) || TRACKER_STATE_TOKEN || "";
+    }
     function sharedSlice(s) {
       return {
         discarded: Array.isArray(s.discarded) ? s.discarded : [],
@@ -1148,6 +1157,32 @@ Visa sponsorship required"></textarea></div>
         (s.discarded || []).length > 0 ||
         Object.keys(s.overrides || {}).length > 0;
     }
+    function decodeGithubBase64(b64) {
+      const bin = atob(String(b64 || "").replace(/\s/g, ""));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    async function fetchSharedJson() {
+      const raw = await fetch(SHARED_RAW_URL + "?t=" + Date.now(), { cache: "no-store" });
+      if (raw.ok) return raw.json();
+      const api = await fetch(SHARED_CONTENTS_URL + "?ref=" + SHARED_BRANCH, {
+        cache: "no-store",
+        headers: { Accept: "application/vnd.github.raw+json" }
+      });
+      if (api.ok) {
+        const ct = api.headers.get("content-type") || "";
+        if (ct.includes("json") || ct.includes("raw")) {
+          try { return await api.json(); } catch { return null; }
+        }
+        return JSON.parse(await api.text());
+      }
+      const meta = await fetch(SHARED_CONTENTS_URL + "?ref=" + SHARED_BRANCH, { cache: "no-store" });
+      if (!meta.ok) return null;
+      const body = await meta.json();
+      if (!body || !body.content) return null;
+      return JSON.parse(decodeGithubBase64(body.content));
+    }
     let pushTimer = null;
     let lastSeenRemote = 0;
     let pushing = false;
@@ -1158,27 +1193,45 @@ Visa sponsorship required"></textarea></div>
     }
     async function pushShared() {
       if (pushing) return;
+      const token = trackerStateToken();
+      if (!token) return;
       pushing = true;
       state.updatedAt = Date.now();
       localStorage.setItem(STORE, JSON.stringify(state));
       try {
-        const res = await fetch(SHARED_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sharedSlice(state))
+        const slice = sharedSlice(state);
+        const payload = JSON.stringify(slice);
+        const meta = await fetch(SHARED_CONTENTS_URL + "?ref=" + SHARED_BRANCH, {
+          cache: "no-store",
+          headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token }
         });
-        if (res.ok) {
-          const saved = await res.json();
-          lastSeenRemote = Number(saved.updatedAt) || state.updatedAt;
+        let sha = "";
+        if (meta.ok) {
+          const info = await meta.json();
+          sha = info && info.sha ? info.sha : "";
         }
+        const res = await fetch(SHARED_CONTENTS_URL, {
+          method: "PUT",
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "update tracker shared state",
+            content: btoa(unescape(encodeURIComponent(payload))),
+            sha: sha || undefined,
+            branch: SHARED_BRANCH
+          })
+        });
+        if (res.ok) lastSeenRemote = Number(slice.updatedAt) || state.updatedAt;
       } catch (e) {}
       pushing = false;
     }
     async function pullShared() {
       try {
-        const res = await fetch(SHARED_URL, { cache: "no-store" });
-        if (!res.ok) return;
-        const part = await res.json();
+        const part = await fetchSharedJson();
+        if (!part) return;
         const remoteAt = Number(part && part.updatedAt) || 0;
         const remoteHas = part && localHasMarks(part);
         if (!remoteAt && !remoteHas && localHasMarks(state)) {
