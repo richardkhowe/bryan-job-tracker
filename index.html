@@ -1195,7 +1195,7 @@ Visa sponsorship required"></textarea></div>
   {
     "id": 45,
     "group": "Process",
-    "text": "When a listing’s link is a job board (LinkedIn, Built In, Wellfound, Wall Street Friends, Indeed), find the same requisition on the company careers/ATS page and set primary `url` to that company link. Reuse the company→ATS graph (`/workspace/hunt/company-ats-graph.json`) and any sibling tracker ATS URLs for that company family before slug-guessing; after a successful remap, learn by upserting the company→ATS mapping. Keep the board URL in `linkedinUrl` / `sourceUrl` (fromLinkedIn true when LinkedIn). Never park an ATS URL only in `compSources`. Fail closed (`remapped: false`) only after graph + sibling + slug-guess attempts.",
+    "text": "When a listing\u2019s link is a job board (LinkedIn, Built In, Wellfound, Wall Street Friends, Indeed), remap primary `url` to the same company/ATS requisition. Order: board JD external/apply \u2192 company\u2192ATS graph + sibling tracker ATS \u2192 same-date cross-slice artifact reuse (`/workspace/hunt/<date>*` matches/skips) \u2192 slug-guess; `remapped: false` only after those steps. Keep board in `linkedinUrl` / `sourceUrl` (fromLinkedIn when LinkedIn). Never park ATS only in `compSources`. Learn: upsert graph on success (amazon.jobs / Workday included). Pre-publish: block if board primary remains while company/ATS URL is known; remaining misses \u2192 Link QA digest (company | title | board url).",
     "on": true
   },
   {
@@ -9281,7 +9281,7 @@ Visa sponsorship required"></textarea></div>
   {
     "id": "plaid-spm-growth",
     "title": "Senior Product Manager, Growth",
-    "url": "https://www.linkedin.com/jobs/view/4442754831/",
+    "url": "https://jobs.ashbyhq.com/plaid/542d46b1-1032-49c8-b96f-806ace7b3a8b",
     "company": "Plaid",
     "category": "Fintech / growth",
     "location": "New York City Metropolitan Area",
@@ -9302,6 +9302,7 @@ Visa sponsorship required"></textarea></div>
     "gated": false,
     "fromLinkedIn": true,
     "linkedinUrl": "https://www.linkedin.com/jobs/view/4442754831/",
+    "remapped": true,
     "liApplicants": 100,
     "reposted": true,
     "benefits": "medical; dental; vision; 401(k)",
@@ -14046,7 +14047,9 @@ Visa sponsorship required"></textarea></div>
   {
     "id": "nourish-spm-growth",
     "title": "Senior Product Manager, Growth",
-    "url": "https://www.builtinnyc.com/job/senior-product-manager-growth/8498685",
+    "url": "https://job-boards.greenhouse.io/usenourish/jobs/5120705008",
+    "linkedinUrl": "https://www.builtinnyc.com/job/senior-product-manager-growth/8498685",
+    "remapped": true,
     "company": "Nourish",
     "category": "Consumer / health lifestyle",
     "location": "New York, NY (NYC-based)",
